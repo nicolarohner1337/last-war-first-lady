@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "last-war-searcher"
+version = "0.1.0"
+description = ""
+authors = ["Nicola Rohenr <social@nicolarohner.ch>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pyautogui = "^0.9.54"
+pillow = "^10.2.0"
+numpy = "^1.26.3"
+opencv-python = "^4.9.0.80"
+opencv-contrib-python = "^4.9.0.80"
+keyboard = "^0.13.5"
+pynput = "^1.7.6"
+pytesseract = "^0.3.10"
+pyperclip = "^1.8.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
