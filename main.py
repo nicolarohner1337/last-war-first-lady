@@ -209,9 +209,43 @@ def eval_buff(buff_name, area):
      #search for coordinates of the construction buff
     coordinates = None
     #make are 100 px bigger in height
-    area[1] -= 150
-    area[3] += 150
+    area[1] -= 100
+    area[3] += 100
     time_stamp_buff_command = time.time()
+
+    soh = find_and_click("./static/alliance/soh.png", area, threshold=0.8)
+    twogr = find_and_click("./static/alliance/2gr.png", area, threshold=0.8)
+    fym = find_and_click("./static/alliance/fym.png", area, threshold=0.8)
+    tot = find_and_click("./static/alliance/tot.png", area, threshold=0.8)
+
+    while not soh and not twogr and not fym and not tot:
+        time.sleep(0.3)
+        soh = find_and_click("./static/alliance/soh.png", area, threshold=0.8)
+        twogr = find_and_click("./static/alliance/2gr.png", area, threshold=0.8)
+        fym = find_and_click("./static/alliance/fym.png", area, threshold=0.8)
+        tot = find_and_click("./static/alliance/tot.png", area, threshold=0.8)
+        if time.time() - time_stamp_buff_command > 15:
+            write_to_chat("No alliance found or alliance not allowed")
+            break
+
+
+    if soh:
+        print("Alliance: SOH")
+        alliance_name = "soh"
+        alliance_priority = 1
+    if twogr:
+        print("Alliance: 2GR")
+        alliance_name = "2gr"
+        alliance_priority = 1
+    if fym:
+        print("Alliance: FYM")
+        alliance_name = "fym"
+        alliance_priority = 2
+    if tot:
+        print("Alliance: TOT")
+        alliance_name = "tot"
+        alliance_priority = 2
+
     while not coordinates:
         time.sleep(3)
         coordinates = find_and_click("./static/coordinates.png", area, threshold=0.7)
@@ -249,7 +283,10 @@ def eval_buff(buff_name, area):
             
         if name not in buffs.waiting_list[buff_name]:
             if name != buff_requested.name:
-                buffs.waiting_list[buff_name].append(name)
+                buffs.waiting_list[buff_name].append([name, alliance_priority])
+                #sort the list by alliance priority but keep the order of the same alliance priority and append the name after the last name with the same alliance priority
+                buffs.waiting_list[buff_name] = sorted(buffs.waiting_list[buff_name], key=lambda x: x[1])
+             
                 string = f"Added {name} to {buff_name} waiting line ({create_waiting_list(buffs)[buff_name]} min)"
                 write_to_chat(string)
     else:
@@ -591,38 +628,6 @@ def handle_buffs(buffs_to_process):
 
 
 def main(dbg=False):
-    #for dbg
-    global chat_input
-    global return_button
-    global screen
-    global chat
-    global position_settings
-    global buffs
-
-    waiting_list = json.load(open("waiting_list.json", "r"))
-    position_settings = json.load(open("position_settings.json", "r"))
-    
-
-    screen = Position(2, coordinates=position_settings["screen"], info="screen")
-    screen = screen.pos
-    print("Screen: ", screen)
-
-    chat_input = Position(1, coordinates=position_settings["chat_input"], info="chat_input")
-    chat_input = chat_input.pos
-    print("Chat input: ", chat_input)
-
-    return_button = Position(1, coordinates=position_settings["return_button"], info="return_button")
-    return_button = return_button.pos
-    print("Return button: ", return_button)
-
-    chat = Position(1, coordinates=position_settings["chat"], info="chat")
-    chat = chat.pos
-    print("Chat: ", chat)
-    print("Naviate to buffs overview if calibration is needed")
-    time.sleep(5)
-    buffs = Buffs(waiting_list)
-    #export json file
-    json.dump(position_settings, open("position_settings.json", "w"))
 
     if dbg:
         print("Construction: ", buffs.positions.construction.pos)
@@ -661,4 +666,38 @@ def main(dbg=False):
 if __name__ == "__main__":
     global dbg
     dbg = False
-    main(dbg)
+
+    #for dbg
+    global chat_input
+    global return_button
+    global screen
+    global chat
+    global position_settings
+    global buffs
+
+    waiting_list = json.load(open("waiting_list.json", "r"))
+    position_settings = json.load(open("position_settings.json", "r"))
+    
+
+    screen = Position(2, coordinates=position_settings["screen"], info="screen")
+    screen = screen.pos
+    print("Screen: ", screen)
+
+    chat_input = Position(1, coordinates=position_settings["chat_input"], info="chat_input")
+    chat_input = chat_input.pos
+    print("Chat input: ", chat_input)
+
+    return_button = Position(1, coordinates=position_settings["return_button"], info="return_button")
+    return_button = return_button.pos
+    print("Return button: ", return_button)
+
+    chat = Position(1, coordinates=position_settings["chat"], info="chat")
+    chat = chat.pos
+    print("Chat: ", chat)
+    print("Naviate to buffs overview if calibration is needed")
+    time.sleep(5)
+    buffs = Buffs(waiting_list)
+    #export json file
+    json.dump(position_settings, open("position_settings.json", "w"))
+    handle_chat(screen)
+    #main(dbg)
