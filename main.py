@@ -566,7 +566,7 @@ def navigate_to_chat():
 def handle_buffs(buffs_to_process):
     for buff in buffs_to_process:
         timestamp_appoint = time.time()
-        new_player_name = buffs.waiting_list[buff.buff_type].pop(0)
+        new_player_name = buffs.waiting_list[buff.buff_type].pop(0)[0]
         #export json file
         json.dump(buffs.waiting_list, open("waiting_list.json", "w"))
         print(f"Processing {buff.buff_type} buff for {new_player_name}")
@@ -699,5 +699,4 @@ if __name__ == "__main__":
     buffs = Buffs(waiting_list)
     #export json file
     json.dump(position_settings, open("position_settings.json", "w"))
-    handle_chat(screen)
-    #main(dbg)
+    main(dbg)
