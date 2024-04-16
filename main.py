@@ -26,16 +26,15 @@ class Buffs:
         self.positions = RolesPosition()
 
     def check(self):
-        buffs_to_process = []
         if (time.time() - self.construction.time_received > 60*10) and len(self.waiting_list["construction"]) > 0:
-            buffs_to_process.append(self.construction)
+            return self.construction
         if (time.time() - self.research.time_received > 60*10) and len(self.waiting_list["research"]) > 0:
-            buffs_to_process.append(self.research)
+            return self.research
         if (time.time() - self.training.time_received > 60*10) and len(self.waiting_list["training"]) > 0:
-            buffs_to_process.append(self.training)
+            return self.training
         if (time.time() - self.heal.time_received > 60*10) and len(self.waiting_list["heal"]) > 0:
-            buffs_to_process.append(self.heal)
-        return buffs_to_process
+            return self.heal
+        return None
 
 
 class RolesPosition:
@@ -240,11 +239,11 @@ def eval_buff(buff_name, area):
     if fym:
         print("Alliance: FYM")
         alliance_name = "fym"
-        alliance_priority = 2
+        alliance_priority = 1
     if tot:
         print("Alliance: TOT")
         alliance_name = "tot"
-        alliance_priority = 2
+        alliance_priority = 1
 
     while not coordinates:
         time.sleep(3)
@@ -274,20 +273,26 @@ def eval_buff(buff_name, area):
         buff_requested = getattr(buffs, buff_name)
         #check if name is already in the waiting list and not active in one of the buffs
         
-        if name in buffs.waiting_list[buff_name]:
+        if name in [name[0] for name in buffs.waiting_list[buff_name]]:
             string = f"{name} is already in the {buff_name} waiting line"
             write_to_chat(string)
         elif name == buff_requested.name:
             string = f"{name} has already {buff_name} buff"
             write_to_chat(string)
             
-        if name not in buffs.waiting_list[buff_name]:
+        if name not in [name[0] for name in buffs.waiting_list[buff_name]]:
             if name != buff_requested.name:
                 buffs.waiting_list[buff_name].append([name, alliance_priority])
                 #sort the list by alliance priority but keep the order of the same alliance priority and append the name after the last name with the same alliance priority
                 buffs.waiting_list[buff_name] = sorted(buffs.waiting_list[buff_name], key=lambda x: x[1])
-             
-                string = f"Added {name} to {buff_name} waiting line ({create_waiting_list(buffs)[buff_name]} min)"
+                time_left = create_waiting_list(buffs)[buff_name]
+                position = [player_name[0] for player_name in buffs.waiting_list[buff_name]].index(name)
+                time_to_subtract = len(buffs.waiting_list[buff_name]) - (position+1)
+                time_left -= time_to_subtract * 10
+                if time_left > 0:
+                    string = f"Added {name} to {buff_name} waiting line #{position+1} ({time_left} min)"
+                else:
+                    string = f"Added {name} to {buff_name} waiting line #{position} ({time_left} min)"
                 write_to_chat(string)
     else:
         write_to_chat("No coordinates found")
@@ -319,9 +324,9 @@ def queue(area, command_pos):
     buff_type = None
 
     for key, value in buffs.waiting_list.items():
-        if name in value:
-            if position is None or value.index(name) < position:
-                position = value.index(name)
+        if name in [player_name[0] for player_name in value]:
+            if position is None or [player_name[0] for player_name in value].index(name) < position:
+                position = [player_name[0] for player_name in value].index(name)
                 buff_type = key
 
     if position is not None:
@@ -332,7 +337,7 @@ def queue(area, command_pos):
         string = f"{name} #{position+1} in {buff_type} waiting line ({time_left} min)"
         write_to_chat(string)
     else:
-        write_to_chat(f"{name} is not in any waiting line")
+        write_to_chat(f"{(name)} is not in any waiting line")
 
 
 def execute_command(command, area, command_pos=None):
@@ -563,68 +568,68 @@ def navigate_to_chat():
     time.sleep(0.3)
 
 
-def handle_buffs(buffs_to_process):
-    for buff in buffs_to_process:
-        timestamp_appoint = time.time()
-        new_player_name = buffs.waiting_list[buff.buff_type].pop(0)[0]
-        #export json file
-        json.dump(buffs.waiting_list, open("waiting_list.json", "w"))
-        print(f"Processing {buff.buff_type} buff for {new_player_name}")
+def handle_buffs(buff):
 
-        print(f"Appointing {new_player_name} to {buff.buff_type} buff")
-        if buff.buff_type == "construction":
-            pyautogui.moveTo(buffs.positions.construction.pos, duration=0.2)
-            pyautogui.click()
-            buffs.construction = Player(name=new_player_name, buff_type=buff.buff_type)
-            appoint_buff(buffs.construction, timestamp_appoint)
-            time.sleep(1)
-            pyautogui.moveTo(buffs.positions.construction.pos[0], buffs.positions.construction.pos[1]-50, duration=0.2)
-            pyautogui.click()
-            time.sleep(0.3)
-        if buff.buff_type == "research":
-            pyautogui.moveTo(buffs.positions.research.pos, duration=0.2)
-            pyautogui.click()
-            buffs.research = Player(name=new_player_name, buff_type=buff.buff_type)
-            appoint_buff(buffs.research, timestamp_appoint)
-            time.sleep(1)
-            pyautogui.moveTo(buffs.positions.research.pos[0], buffs.positions.research.pos[1]-50, duration=0.2)
-            pyautogui.click()
-            time.sleep(0.3)
-        if buff.buff_type == "training":
-            pyautogui.moveTo(buffs.positions.training.pos, duration=0.2)
-            pyautogui.click()
-            buffs.training = Player(name=new_player_name, buff_type=buff.buff_type)
-            appoint_buff(buffs.training, timestamp_appoint)
-            time.sleep(1)
-            pyautogui.moveTo(buffs.positions.training.pos[0], buffs.positions.training.pos[1]-50, duration=0.2)
-            pyautogui.click()
-            time.sleep(0.3)
-        if buff.buff_type == "heal":
-            pyautogui.moveTo(buffs.positions.heal.pos, duration=0.2)
-            pyautogui.click()
-            buffs.heal = Player(name=new_player_name, buff_type=buff.buff_type)
-            appoint_buff(buffs.heal, timestamp_appoint)
-            time.sleep(1)
-            pyautogui.moveTo(buffs.positions.heal.pos[0], buffs.positions.heal.pos[1]-50, duration=0.2)
-            pyautogui.click()
-            time.sleep(0.3)
-        
+    timestamp_appoint = time.time()
+    new_player_name = buffs.waiting_list[buff.buff_type].pop(0)[0]
+    #export json file
+    json.dump(buffs.waiting_list, open("waiting_list.json", "w"))
+    print(f"Processing {buff.buff_type} buff for {new_player_name}")
+
+    print(f"Appointing {new_player_name} to {buff.buff_type} buff")
+    if buff.buff_type == "construction":
+        pyautogui.moveTo(buffs.positions.construction.pos, duration=0.2)
+        pyautogui.click()
+        buffs.construction = Player(name=new_player_name, buff_type=buff.buff_type)
+        appoint_buff(buffs.construction, timestamp_appoint)
+        time.sleep(1)
+        pyautogui.moveTo(buffs.positions.construction.pos[0], buffs.positions.construction.pos[1]-50, duration=0.2)
+        pyautogui.click()
+        time.sleep(0.3)
+    if buff.buff_type == "research":
+        pyautogui.moveTo(buffs.positions.research.pos, duration=0.2)
+        pyautogui.click()
+        buffs.research = Player(name=new_player_name, buff_type=buff.buff_type)
+        appoint_buff(buffs.research, timestamp_appoint)
+        time.sleep(1)
+        pyautogui.moveTo(buffs.positions.research.pos[0], buffs.positions.research.pos[1]-50, duration=0.2)
+        pyautogui.click()
+        time.sleep(0.3)
+    if buff.buff_type == "training":
+        pyautogui.moveTo(buffs.positions.training.pos, duration=0.2)
+        pyautogui.click()
+        buffs.training = Player(name=new_player_name, buff_type=buff.buff_type)
+        appoint_buff(buffs.training, timestamp_appoint)
+        time.sleep(1)
+        pyautogui.moveTo(buffs.positions.training.pos[0], buffs.positions.training.pos[1]-50, duration=0.2)
+        pyautogui.click()
+        time.sleep(0.3)
+    if buff.buff_type == "heal":
+        pyautogui.moveTo(buffs.positions.heal.pos, duration=0.2)
+        pyautogui.click()
+        buffs.heal = Player(name=new_player_name, buff_type=buff.buff_type)
+        appoint_buff(buffs.heal, timestamp_appoint)
+        time.sleep(1)
+        pyautogui.moveTo(buffs.positions.heal.pos[0], buffs.positions.heal.pos[1]-50, duration=0.2)
+        pyautogui.click()
+        time.sleep(0.3)
+    
+    chat = find_and_click("./static/chat.png", screen, threshold=0.8)
+    while not chat:
+        time.sleep(0.1)
         chat = find_and_click("./static/chat.png", screen, threshold=0.8)
-        while not chat:
-            time.sleep(0.1)
-            chat = find_and_click("./static/chat.png", screen, threshold=0.8)
-        
-        absoulte_coordinates = (screen[0] + chat[0], screen[1] + chat[1])
-        absoulte_coordinates = correct_coordinates(absoulte_coordinates, 0, -40)
-        pyautogui.moveTo(absoulte_coordinates, duration=0.2)
-        pyautogui.click()
-        time.sleep(0.3)
-        write_to_chat(f"{new_player_name} GO!")
-        time.sleep(0.3)
-        #press on return button
-        pyautogui.moveTo(return_button[0], return_button[1], duration=0.2)
-        pyautogui.click()
-        time.sleep(0.3)
+    
+    absoulte_coordinates = (screen[0] + chat[0], screen[1] + chat[1])
+    absoulte_coordinates = correct_coordinates(absoulte_coordinates, 0, -40)
+    pyautogui.moveTo(absoulte_coordinates, duration=0.2)
+    pyautogui.click()
+    time.sleep(0.3)
+    write_to_chat(f"{new_player_name} GO!")
+    time.sleep(0.3)
+    #press on return button
+    pyautogui.moveTo(return_button[0], return_button[1], duration=0.2)
+    pyautogui.click()
+    time.sleep(0.3)
 
 
 def main(dbg=False):
@@ -652,10 +657,10 @@ def main(dbg=False):
             #export json file
             json.dump(buffs.waiting_list, open("waiting_list.json", "w"))
 
-        buffs_to_process = buffs.check()
-        if len(buffs_to_process) > 0:
+        buff_to_process = buffs.check()
+        if buff_to_process:
             naviate_to_buffs()
-            handle_buffs(buffs_to_process)
+            handle_buffs(buff_to_process)
             #navigate_to_chat()
             searching_switch = True
         
