@@ -489,7 +489,7 @@ def appoint_buff(buff, timestamp_appoint):
     pyautogui.moveTo(absoulte_coordinates, duration=0.2)
     pyautogui.press('enter')
     pyautogui.click()
-    time.sleep(1)
+    time.sleep(1.5)
     absoulte_coordinates = correct_coordinates(absoulte_coordinates, -380, 90)
     pyautogui.moveTo(absoulte_coordinates, duration=0.2)
     pyautogui.click()
