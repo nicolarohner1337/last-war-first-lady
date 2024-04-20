@@ -26,13 +26,13 @@ class Buffs:
         self.positions = RolesPosition()
 
     def check(self):
-        if (time.time() - self.construction.time_received > 60*10) and len(self.waiting_list["construction"]) > 0:
+        if (time.time() - self.construction.time_received > (60*10)-5) and len(self.waiting_list["construction"]) > 0:
             return self.construction
-        if (time.time() - self.research.time_received > 60*10) and len(self.waiting_list["research"]) > 0:
+        if (time.time() - self.research.time_received > (60*10)-5) and len(self.waiting_list["research"]) > 0:
             return self.research
-        if (time.time() - self.training.time_received > 60*10) and len(self.waiting_list["training"]) > 0:
+        if (time.time() - self.training.time_received > (60*10)-5) and len(self.waiting_list["training"]) > 0:
             return self.training
-        if (time.time() - self.heal.time_received > 60*10) and len(self.waiting_list["heal"]) > 0:
+        if (time.time() - self.heal.time_received > (60*10)-5) and len(self.waiting_list["heal"]) > 0:
             return self.heal
         return None
 
@@ -244,7 +244,9 @@ def eval_buff(buff_name, area):
         print("Alliance: TOT")
         alliance_name = "tot"
         alliance_priority = 1
-
+    else:
+        alliance_name = "other"
+        alliance_priority = 1
     while not coordinates:
         time.sleep(3)
         coordinates = find_and_click("./static/coordinates.png", area, threshold=0.7)
@@ -472,7 +474,7 @@ def appoint_buff(buff, timestamp_appoint):
     absoulte_coordinates = (screen[0] + search[0], screen[1] + search[1])
     absoulte_coordinates = correct_coordinates(absoulte_coordinates, -50, 0)
     pyautogui.moveTo(absoulte_coordinates, duration=0.2)
-    #click on search
+    #click on search twice since the first click is not always working
     pyautogui.click()
     time.sleep(0.3)
     pyautogui.shortcut('ctrl', 'a')
@@ -485,9 +487,12 @@ def appoint_buff(buff, timestamp_appoint):
     pyautogui.shortcut('ctrl', 'v')
     time.sleep(0.3)
     
+    pyautogui.press('enter')
     absoulte_coordinates = correct_coordinates(absoulte_coordinates, 50,0)
     pyautogui.moveTo(absoulte_coordinates, duration=0.2)
-    pyautogui.press('enter')
+    #click on search twice since the first click is not always working
+    pyautogui.click()
+    time.sleep(0.3)
     pyautogui.click()
     time.sleep(1.5)
     absoulte_coordinates = correct_coordinates(absoulte_coordinates, -380, 90)
@@ -618,12 +623,12 @@ def handle_buffs(buff):
     while not chat:
         time.sleep(0.1)
         chat = find_and_click("./static/chat.png", screen, threshold=0.8)
-    
+    time.sleep(0.3)
     absoulte_coordinates = (screen[0] + chat[0], screen[1] + chat[1])
     absoulte_coordinates = correct_coordinates(absoulte_coordinates, 0, -40)
     pyautogui.moveTo(absoulte_coordinates, duration=0.2)
     pyautogui.click()
-    time.sleep(0.3)
+    time.sleep(0.8)
     write_to_chat(f"{new_player_name} GO!")
     time.sleep(0.3)
     #press on return button
@@ -645,9 +650,9 @@ def main(dbg=False):
         if searching_switch:
             print("Searching for new message")
             searching_switch = False
+        
         new_message = find_and_click("./static/new_message.png", screen)
-        if new_message:
-            #mark found area
+        while new_message:
             absolute_coordinates = (screen[0] + new_message[0], screen[1] + new_message[1])
             pyautogui.moveTo(absolute_coordinates[0], absolute_coordinates[1], duration=0.2)
             #click on chat
@@ -656,6 +661,8 @@ def main(dbg=False):
             handle_chat(screen)
             #export json file
             json.dump(buffs.waiting_list, open("waiting_list.json", "w"))
+            new_message = find_and_click("./static/new_message.png", screen)
+            time.sleep(1)
 
         buff_to_process = buffs.check()
         if buff_to_process:
