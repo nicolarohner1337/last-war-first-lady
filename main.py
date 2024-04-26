@@ -26,13 +26,13 @@ class Buffs:
         self.positions = RolesPosition()
 
     def check(self):
-        if (time.time() - self.construction.time_received > (60*10)-5) and len(self.waiting_list["construction"]) > 0:
+        if (time.time() - self.construction.time_received > (60*10)-2) and len(self.waiting_list["construction"]) > 0:
             return self.construction
-        if (time.time() - self.research.time_received > (60*10)-5) and len(self.waiting_list["research"]) > 0:
+        if (time.time() - self.research.time_received > (60*10)-2) and len(self.waiting_list["research"]) > 0:
             return self.research
-        if (time.time() - self.training.time_received > (60*10)-5) and len(self.waiting_list["training"]) > 0:
+        if (time.time() - self.training.time_received > (60*10)-2) and len(self.waiting_list["training"]) > 0:
             return self.training
-        if (time.time() - self.heal.time_received > (60*10)-5) and len(self.waiting_list["heal"]) > 0:
+        if (time.time() - self.heal.time_received > (60*10)-2) and len(self.waiting_list["heal"]) > 0:
             return self.heal
         return None
 
@@ -202,6 +202,7 @@ def write_to_chat(string):
     pyautogui.moveTo(absoulte_coordinates, duration=0.2)
     pyautogui.click()
     pyautogui.press('enter')
+    time.sleep(0.3)
 
 
 def eval_buff(buff_name, area):
@@ -217,15 +218,15 @@ def eval_buff(buff_name, area):
     fym = find_and_click("./static/alliance/fym.png", area, threshold=0.8)
     tot = find_and_click("./static/alliance/tot.png", area, threshold=0.8)
 
-    while not soh and not twogr and not fym and not tot:
+    while not soh and not twogr and not fym and not tot and not weekend:
         time.sleep(0.3)
         soh = find_and_click("./static/alliance/soh.png", area, threshold=0.8)
         twogr = find_and_click("./static/alliance/2gr.png", area, threshold=0.8)
         fym = find_and_click("./static/alliance/fym.png", area, threshold=0.8)
         tot = find_and_click("./static/alliance/tot.png", area, threshold=0.8)
         if time.time() - time_stamp_buff_command > 15:
-            write_to_chat("No alliance found or alliance not allowed")
-            break
+            write_to_chat("Alliance not allowed during the week")
+            return
 
 
     if soh:
@@ -244,9 +245,10 @@ def eval_buff(buff_name, area):
         print("Alliance: TOT")
         alliance_name = "tot"
         alliance_priority = 1
-    else:
+    if weekend:
         alliance_name = "other"
         alliance_priority = 1
+
     while not coordinates:
         time.sleep(3)
         coordinates = find_and_click("./static/coordinates.png", area, threshold=0.7)
@@ -304,13 +306,16 @@ def eval_buff(buff_name, area):
 def queue(area, command_pos):
     absoulte_coordinates = (area[0] + command_pos[0], area[1] + command_pos[1])
     absoulte_coordinates = correct_coordinates(absoulte_coordinates, -70, -40)
-    pyautogui.moveTo(absoulte_coordinates, duration=0.2)
+    pyautogui.moveTo(absoulte_coordinates, duration=0.1)
     pyautogui.click()
     time.sleep(0.5)
     copy_name = None
+    time_stamp_buff_command = time.time()
     while not copy_name:
         copy_name = find_and_click("./static/copy_name.png", screen, threshold=0.7)
         time.sleep(0.3)
+        if time.time() - time_stamp_buff_command > 15:
+            return
     absoulte_coordinates = (screen[0] + copy_name[0], screen[1] + copy_name[1])
     pyautogui.moveTo(absoulte_coordinates, duration=0.2)
     pyautogui.click()
@@ -397,15 +402,10 @@ def handle_chat(screen):
         time.sleep(0.3)
     else:
         print("No command found")
-        return_back = find_and_click("./static/return_back.png", screen, threshold=0.8)
-        while not return_back:
-            time.sleep(0.1)
-            return_back = find_and_click("./static/return_back.png", screen, threshold=0.8)
-            if return_back:
-                break
-        absoulte_coordinates = (screen[0] + return_back[0], screen[1] + return_back[1])
-        pyautogui.moveTo(absoulte_coordinates, duration=0.2)
+        #go back to chat overview
+        pyautogui.moveTo(return_button[0], return_button[1], duration=0.2)
         pyautogui.click()
+        time.sleep(0.3)
 
 
 def naviate_to_buffs():
@@ -652,12 +652,26 @@ def main(dbg=False):
             searching_switch = False
         
         new_message = find_and_click("./static/new_message.png", screen)
-        while new_message:
+        exit_loops = False
+        while new_message and not exit_loops:
             absolute_coordinates = (screen[0] + new_message[0], screen[1] + new_message[1])
             pyautogui.moveTo(absolute_coordinates[0], absolute_coordinates[1], duration=0.2)
             #click on chat
             pyautogui.click()
             time.sleep(0.3)
+            #check if we are in the chat
+            send_message = find_and_click("./static/send_message.png", screen)
+            time_stamp_new_message = time.time()
+            while not send_message:
+                time.sleep(0.3)
+                send_message = find_and_click("./static/send_message.png", screen)
+                if time.time() - time_stamp_new_message > 2:
+                    #return to chat overview
+                    time.sleep(0.3)
+                    exit_loops = True
+                    break
+                    
+                #
             handle_chat(screen)
             #export json file
             json.dump(buffs.waiting_list, open("waiting_list.json", "w"))
@@ -686,7 +700,9 @@ if __name__ == "__main__":
     global chat
     global position_settings
     global buffs
+    global weekend
 
+    weekend = False
     waiting_list = json.load(open("waiting_list.json", "r"))
     position_settings = json.load(open("position_settings.json", "r"))
     
